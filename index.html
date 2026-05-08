@@ -3,15 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Handy-Text | Prompt Manager</title>
+    <title>Handy-Text | Cloud Sync</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-card">
+            <h1>Handy-Text</h1>
+            <p>Your personal cloud-synced prompt repository.</p>
+            <button id="loginBtn" class="btn-primary" style="margin-top: 1rem;">Sign in with Google</button>
+        </div>
+    </div>
+
+    <!-- MAIN APPLICATION (Hidden until logged in) -->
+    <div class="container hidden" id="appContainer">
         <header>
             <div class="header-titles">
                 <h1>Handy-Text</h1>
-                <p>Your personal prompt repository</p>
+                <p id="userEmailDisplay">Logged in as...</p>
             </div>
             <!-- Navigation -->
             <nav class="header-nav">
@@ -19,6 +29,7 @@
                 <button id="navFavorites" class="nav-btn">★ Favorites</button>
                 <button id="navPinned" class="nav-btn">📌 Pinned</button>
                 <button id="navTrash" class="nav-btn">🗑️ Trash <span id="trashCount" class="badge">0</span></button>
+                <button id="logoutBtn" class="nav-btn" style="color: var(--danger); margin-left: auto;">Logout</button>
             </nav>
         </header>
 
@@ -34,22 +45,18 @@
                 <h2 id="formTitle">Add New Prompt</h2>
                 <form id="promptForm">
                     <input type="hidden" id="promptId">
-                    
                     <div class="form-group">
                         <label for="title">Title</label>
                         <input type="text" id="title" placeholder="e.g., SEO Article Template" required>
                     </div>
-
                     <div class="form-group">
                         <label for="category">Category</label>
                         <input type="text" id="category" placeholder="e.g., Writing, Code, General" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="content">Prompt Text (Use {{variable_name}} for dynamic inputs)</label>
-                        <textarea id="content" rows="4" placeholder='e.g., Write a blog about {{topic}} targeting {{audience}}.' required></textarea>
+                        <label for="content">Prompt Text (Use {{variable}} for dynamic inputs)</label>
+                        <textarea id="content" rows="4" placeholder='e.g., Write a blog about {{topic}}.' required></textarea>
                     </div>
-
                     <button type="submit" id="submitBtn" class="btn-primary">Save Prompt</button>
                     <button type="button" id="cancelBtn" class="btn-secondary hidden">Cancel Edit</button>
                 </form>
@@ -85,16 +92,14 @@
                 <button id="closeModalBtn" class="icon-btn close-btn">&times;</button>
             </div>
             <p class="modal-subtitle">Enter values for the dynamic variables below:</p>
-            
-            <!-- JavaScript will inject inputs here -->
             <div id="dynamicInputsContainer"></div>
-            
             <div class="modal-footer">
-                <button id="generateCopyBtn" class="btn-primary">Generate & Copy Final Prompt</button>
+                <button id="generateCopyBtn" class="btn-primary">Generate & Copy</button>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- CRITICAL: Type is 'module' to allow Firebase imports -->
+    <script type="module" src="script.js"></script>
 </body>
 </html>
