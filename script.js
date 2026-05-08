@@ -7,12 +7,12 @@ import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstat
 // --- PASTE YOUR FIREBASE CONFIG HERE ---
 // You get this from Firebase Console > Project Settings > Your Apps
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCkMxoG1D5J63TNyMQaV0A-SCvojTzUPoI",
+    authDomain: "handy-text.firebaseapp.com",
+    projectId: "handy-text",
+    storageBucket: "handy-text.firebasestorage.app",
+    messagingSenderId: "1048754691801",
+    appId: "1:1048754691801:web:7717d49781e03ef451a8c8"
 };
 
 // Initialize Firebase
@@ -80,21 +80,21 @@ const generateCopyBtn = document.getElementById('generateCopyBtn');
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        loginScreen.classList.add('hidden');
-        appContainer.classList.remove('hidden');
-        userEmailDisplay.innerText = user.email;
+        if(loginScreen) loginScreen.classList.add('hidden');
+        if(appContainer) appContainer.classList.remove('hidden');
+        if(userEmailDisplay) userEmailDisplay.innerText = user.email;
         
         await migrateLocalDataToFirebase();
         setupRealtimeSync();
     } else {
         currentUser = null;
-        loginScreen.classList.remove('hidden');
-        appContainer.classList.add('hidden');
+        if(loginScreen) loginScreen.classList.remove('hidden');
+        if(appContainer) appContainer.classList.add('hidden');
     }
 });
 
-loginBtn.addEventListener('click', () => signInWithPopup(auth, provider));
-logoutBtn.addEventListener('click', () => signOut(auth));
+if(loginBtn) loginBtn.addEventListener('click', () => signInWithPopup(auth, provider));
+if(logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
 
 // Migration: Move localStorage data to Cloud safely
 async function migrateLocalDataToFirebase() {
@@ -149,51 +149,57 @@ async function syncToCloud() {
 
 // --- INITIALIZATION ---
 function init() {
-    navAll.addEventListener('click', () => switchView('all'));
-    navFavorites.addEventListener('click', () => switchView('favorites'));
-    navPinned.addEventListener('click', () => switchView('pinned'));
-    navTrash.addEventListener('click', () => switchView('trash'));
+    if(navAll) navAll.addEventListener('click', () => switchView('all'));
+    if(navFavorites) navFavorites.addEventListener('click', () => switchView('favorites'));
+    if(navPinned) navPinned.addEventListener('click', () => switchView('pinned'));
+    if(navTrash) navTrash.addEventListener('click', () => switchView('trash'));
     
-    searchInput.addEventListener('input', updateUI);
-    categoryFilter.addEventListener('change', updateUI);
-    cancelBtn.addEventListener('click', resetForm);
+    if(searchInput) searchInput.addEventListener('input', updateUI);
+    if(categoryFilter) categoryFilter.addEventListener('change', updateUI);
+    if(cancelBtn) cancelBtn.addEventListener('click', resetForm);
     
-    closeModalBtn.addEventListener('click', closeVariableModal);
-    generateCopyBtn.addEventListener('click', processAndCopyTemplate);
+    if(closeModalBtn) closeModalBtn.addEventListener('click', closeVariableModal);
+    if(generateCopyBtn) generateCopyBtn.addEventListener('click', processAndCopyTemplate);
 }
 
 
 // --- VIEW NAVIGATION & UI ---
 function switchView(view) {
     currentView = view;
-    [navAll, navFavorites, navPinned, navTrash].forEach(btn => btn.classList.remove('active'));
+    [navAll, navFavorites, navPinned, navTrash].forEach(btn => {
+        if(btn) btn.classList.remove('active');
+    });
     
     if (view === 'all') {
-        navAll.classList.add('active'); 
-        viewMain.classList.remove('hidden'); 
-        viewTrash.classList.add('hidden'); 
-        formSection.classList.remove('hidden'); 
-        viewHeader.style.display = 'none';
+        if(navAll) navAll.classList.add('active'); 
+        if(viewMain) viewMain.classList.remove('hidden'); 
+        if(viewTrash) viewTrash.classList.add('hidden'); 
+        if(formSection) formSection.classList.remove('hidden'); 
+        if(viewHeader) viewHeader.style.display = 'none';
     } else if (view === 'favorites') {
-        navFavorites.classList.add('active'); 
-        viewMain.classList.remove('hidden'); 
-        viewTrash.classList.add('hidden'); 
-        formSection.classList.add('hidden'); 
-        viewHeader.style.display = 'block'; 
-        viewTitle.innerText = '★ Favorite Prompts'; 
-        viewSubtitle.innerText = 'Your most loved prompts.';
+        if(navFavorites) navFavorites.classList.add('active'); 
+        if(viewMain) viewMain.classList.remove('hidden'); 
+        if(viewTrash) viewTrash.classList.add('hidden'); 
+        if(formSection) formSection.classList.add('hidden'); 
+        if(viewHeader) {
+            viewHeader.style.display = 'block'; 
+            if(viewTitle) viewTitle.innerText = '★ Favorite Prompts'; 
+            if(viewSubtitle) viewSubtitle.innerText = 'Your most loved prompts.';
+        }
     } else if (view === 'pinned') {
-        navPinned.classList.add('active'); 
-        viewMain.classList.remove('hidden'); 
-        viewTrash.classList.add('hidden'); 
-        formSection.classList.add('hidden'); 
-        viewHeader.style.display = 'block'; 
-        viewTitle.innerText = '📌 Pinned Prompts'; 
-        viewSubtitle.innerText = 'Prompts kept at the top for quick access.';
+        if(navPinned) navPinned.classList.add('active'); 
+        if(viewMain) viewMain.classList.remove('hidden'); 
+        if(viewTrash) viewTrash.classList.add('hidden'); 
+        if(formSection) formSection.classList.add('hidden'); 
+        if(viewHeader) {
+            viewHeader.style.display = 'block'; 
+            if(viewTitle) viewTitle.innerText = '📌 Pinned Prompts'; 
+            if(viewSubtitle) viewSubtitle.innerText = 'Prompts kept at the top for quick access.';
+        }
     } else if (view === 'trash') {
-        navTrash.classList.add('active'); 
-        viewMain.classList.add('hidden'); 
-        viewTrash.classList.remove('hidden');
+        if(navTrash) navTrash.classList.add('active'); 
+        if(viewMain) viewMain.classList.add('hidden'); 
+        if(viewTrash) viewTrash.classList.remove('hidden');
     }
     updateUI();
 }
@@ -205,15 +211,16 @@ function updateUI() {
         renderTrashPrompts();
     }
     updateCategoryFilter();
-    trashCount.innerText = trashPrompts.length;
+    if(trashCount) trashCount.innerText = trashPrompts.length;
 }
 
 
 // --- RENDERING CARDS ---
 function renderActivePrompts() {
+    if(!promptGrid) return;
     promptGrid.innerHTML = '';
-    const filterText = searchInput.value.toLowerCase();
-    const filterCat = categoryFilter.value;
+    const filterText = searchInput ? searchInput.value.toLowerCase() : '';
+    const filterCat = categoryFilter ? categoryFilter.value : 'all';
 
     let filtered = activePrompts.filter(p => 
         (p.title.toLowerCase().includes(filterText) || p.category.toLowerCase().includes(filterText)) &&
@@ -236,6 +243,7 @@ function renderActivePrompts() {
 }
 
 function renderTrashPrompts() {
+    if(!trashGrid) return;
     trashGrid.innerHTML = '';
     if (trashPrompts.length === 0) {
         trashGrid.innerHTML = '<p style="color: var(--text-muted);">Trash is empty.</p>'; 
@@ -305,6 +313,7 @@ window.handleUsePrompt = function(id, btnElement) {
 function openVariableModal(textTemplate, variables, btnElement) {
     currentTemplateText = textTemplate; 
     currentTriggerButton = btnElement; 
+    if(!dynamicInputsContainer) return;
     dynamicInputsContainer.innerHTML = '';
     
     variables.forEach(varName => {
@@ -318,12 +327,15 @@ function openVariableModal(textTemplate, variables, btnElement) {
         dynamicInputsContainer.appendChild(div);
     });
     
-    variableModal.classList.remove('hidden');
-    setTimeout(() => document.querySelector('.dynamic-var-input').focus(), 100);
+    if(variableModal) variableModal.classList.remove('hidden');
+    setTimeout(() => {
+        const firstInput = document.querySelector('.dynamic-var-input');
+        if(firstInput) firstInput.focus();
+    }, 100);
 }
 
 function closeVariableModal() {
-    variableModal.classList.add('hidden'); 
+    if(variableModal) variableModal.classList.add('hidden'); 
     currentTemplateText = ''; 
     currentTriggerButton = null;
 }
@@ -361,47 +373,49 @@ async function executeCopy(textToCopy, btnElement) {
 
 
 // --- STANDARD CRUD ACTIONS (Now Syncs to Cloud) ---
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const id = promptIdInput.value;
-    const newPrompt = {
-        id: id || Date.now().toString(),
-        title: titleInput.value.trim(), 
-        category: categoryInput.value.trim(), 
-        content: contentInput.value.trim(),
-        isFavorite: false, 
-        isPinned: false
-    };
+if(form) {
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = promptIdInput ? promptIdInput.value : null;
+        const newPrompt = {
+            id: id || Date.now().toString(),
+            title: titleInput ? titleInput.value.trim() : '', 
+            category: categoryInput ? categoryInput.value.trim() : '', 
+            content: contentInput ? contentInput.value.trim() : '',
+            isFavorite: false, 
+            isPinned: false
+        };
 
-    if (id) {
-        const existing = activePrompts.find(p => p.id === id);
-        if (existing) { 
-            newPrompt.isFavorite = existing.isFavorite; 
-            newPrompt.isPinned = existing.isPinned; 
+        if (id) {
+            const existing = activePrompts.find(p => p.id === id);
+            if (existing) { 
+                newPrompt.isFavorite = existing.isFavorite; 
+                newPrompt.isPinned = existing.isPinned; 
+            }
+            const index = activePrompts.findIndex(p => p.id === id);
+            activePrompts[index] = newPrompt;
+        } else {
+            activePrompts.unshift(newPrompt);
         }
-        const index = activePrompts.findIndex(p => p.id === id);
-        activePrompts[index] = newPrompt;
-    } else {
-        activePrompts.unshift(newPrompt);
-    }
-    
-    syncToCloud(); 
-    resetForm();
-});
+        
+        syncToCloud(); 
+        resetForm();
+    });
+}
 
 window.editPrompt = function(id) {
     const p = activePrompts.find(p => p.id === id);
     if (!p) return;
     
-    promptIdInput.value = p.id; 
-    titleInput.value = p.title; 
-    categoryInput.value = p.category; 
-    contentInput.value = p.content;
+    if(promptIdInput) promptIdInput.value = p.id; 
+    if(titleInput) titleInput.value = p.title; 
+    if(categoryInput) categoryInput.value = p.category; 
+    if(contentInput) contentInput.value = p.content;
     
     switchView('all'); 
-    formTitle.innerText = 'Edit Prompt'; 
-    submitBtn.innerText = 'Update Prompt'; 
-    cancelBtn.classList.remove('hidden');
+    if(formTitle) formTitle.innerText = 'Edit Prompt'; 
+    if(submitBtn) submitBtn.innerText = 'Update Prompt'; 
+    if(cancelBtn) cancelBtn.classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -447,6 +461,7 @@ window.togglePin = function(id) {
 
 // --- UTILITIES ---
 function updateCategoryFilter() {
+    if(!categoryFilter) return;
     const sourceArray = currentView === 'trash' ? trashPrompts : activePrompts;
     const categories = [...new Set(sourceArray.map(p => p.category))];
     const currentVal = categoryFilter.value;
@@ -462,11 +477,11 @@ function updateCategoryFilter() {
 }
 
 function resetForm() {
-    form.reset(); 
-    promptIdInput.value = ''; 
-    formTitle.innerText = 'Add New Prompt'; 
-    submitBtn.innerText = 'Save Prompt'; 
-    cancelBtn.classList.add('hidden');
+    if(form) form.reset(); 
+    if(promptIdInput) promptIdInput.value = ''; 
+    if(formTitle) formTitle.innerText = 'Add New Prompt'; 
+    if(submitBtn) submitBtn.innerText = 'Save Prompt'; 
+    if(cancelBtn) cancelBtn.classList.add('hidden');
 }
 
 function escapeHTML(str) {
