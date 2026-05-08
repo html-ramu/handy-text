@@ -13,7 +13,7 @@
                 <h1>Handy-Text</h1>
                 <p>Your personal prompt repository</p>
             </div>
-            <!-- Expanded Navigation for Filtering -->
+            <!-- Navigation -->
             <nav class="header-nav">
                 <button id="navAll" class="nav-btn active">All</button>
                 <button id="navFavorites" class="nav-btn">★ Favorites</button>
@@ -22,16 +22,14 @@
             </nav>
         </header>
 
-        <!-- MAIN VIEW (All, Favorites, Pinned) -->
+        <!-- MAIN VIEW -->
         <main id="viewMain">
-            
-            <!-- Dynamic Header for current view -->
             <div class="view-header" id="viewHeader" style="display: none;">
                 <h2 id="viewTitle">View</h2>
                 <p id="viewSubtitle">Description</p>
             </div>
 
-            <!-- Form for Adding/Editing Prompts (Hidden in Fav/Pinned views to save space) -->
+            <!-- Add/Edit Form -->
             <section class="form-card" id="formSection">
                 <h2 id="formTitle">Add New Prompt</h2>
                 <form id="promptForm">
@@ -39,17 +37,17 @@
                     
                     <div class="form-group">
                         <label for="title">Title</label>
-                        <input type="text" id="title" placeholder="e.g., Code Review Prompt" required>
+                        <input type="text" id="title" placeholder="e.g., SEO Article Template" required>
                     </div>
 
                     <div class="form-group">
                         <label for="category">Category</label>
-                        <input type="text" id="category" placeholder="e.g., Development, SEO, General" required>
+                        <input type="text" id="category" placeholder="e.g., Writing, Code, General" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="content">Prompt Text</label>
-                        <textarea id="content" rows="4" placeholder="Type your prompt here..." required></textarea>
+                        <label for="content">Prompt Text (Use {{variable_name}} for dynamic inputs)</label>
+                        <textarea id="content" rows="4" placeholder='e.g., Write a blog about {{topic}} targeting {{audience}}.' required></textarea>
                     </div>
 
                     <button type="submit" id="submitBtn" class="btn-primary">Save Prompt</button>
@@ -62,27 +60,39 @@
                 <input type="text" id="searchInput" placeholder="Search prompts by title or category...">
                 <select id="categoryFilter">
                     <option value="all">All Categories</option>
-                    <!-- Categories populated dynamically -->
                 </select>
             </section>
 
-            <!-- Active Prompt Cards Grid -->
-            <section class="prompt-grid" id="promptGrid">
-                <!-- Active cards injected here -->
-            </section>
+            <!-- Active Prompts Grid -->
+            <section class="prompt-grid" id="promptGrid"></section>
         </main>
 
-        <!-- TRASH VIEW (Deleted Prompts) -->
+        <!-- TRASH VIEW -->
         <main id="viewTrash" class="hidden">
             <div class="trash-header">
                 <h2>Trash</h2>
                 <p>Deleted prompts stay here. You can restore them or delete them permanently.</p>
             </div>
-            
-            <section class="prompt-grid" id="trashGrid">
-                <!-- Trash cards injected here -->
-            </section>
+            <section class="prompt-grid" id="trashGrid"></section>
         </main>
+    </div>
+
+    <!-- DYNAMIC VARIABLE MODAL -->
+    <div id="variableModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Fill Template Variables</h2>
+                <button id="closeModalBtn" class="icon-btn close-btn">&times;</button>
+            </div>
+            <p class="modal-subtitle">Enter values for the dynamic variables below:</p>
+            
+            <!-- JavaScript will inject inputs here -->
+            <div id="dynamicInputsContainer"></div>
+            
+            <div class="modal-footer">
+                <button id="generateCopyBtn" class="btn-primary">Generate & Copy Final Prompt</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

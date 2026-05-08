@@ -1,25 +1,17 @@
-// --- STATE MANAGEMENT & MIGRATION ---
+// --- STATE MANAGEMENT ---
 let activePrompts = [];
 let trashPrompts = [];
-let currentView = 'all'; // can be 'all', 'favorites', 'pinned', 'trash'
+let currentView = 'all';
 
-function loadAndMigrateData() {
+// Modal State Variables
+let currentTemplateText = '';
+let currentTriggerButton = null;
+
+function loadData() {
     const loadedActive = JSON.parse(localStorage.getItem('handyTextActivePrompts'));
     const loadedTrash = JSON.parse(localStorage.getItem('handyTextTrashPrompts'));
-
-    // Migrate active prompts to ensure they have the new Pin/Favorite properties
-    if (loadedActive) {
-        activePrompts = loadedActive.map(p => ({
-            ...p,
-            isFavorite: p.isFavorite || false, // Add default false if missing
-            isPinned: p.isPinned || false      // Add default false if missing
-        }));
-    } else {
-        activePrompts = [];
-    }
-
+    activePrompts = loadedActive || [];
     trashPrompts = loadedTrash || [];
-    saveData(); 
 }
 
 function saveData() {
@@ -56,29 +48,35 @@ const trashGrid = document.getElementById('trashGrid');
 const searchInput = document.getElementById('searchInput');
 const categoryFilter = document.getElementById('categoryFilter');
 
+// Modal Elements
+const variableModal = document.getElementById('variableModal');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const dynamicInputsContainer = document.getElementById('dynamicInputsContainer');
+const generateCopyBtn = document.getElementById('generateCopyBtn');
+
 // --- INITIALIZATION ---
 function init() {
-    loadAndMigrateData();
+    loadData();
     
-    // Setup View Event Listeners
     navAll.addEventListener('click', () => switchView('all'));
     navFavorites.addEventListener('click', () => switchView('favorites'));
     navPinned.addEventListener('click', () => switchView('pinned'));
     navTrash.addEventListener('click', () => switchView('trash'));
     
-    // Setup Search/Filter Listeners
     searchInput.addEventListener('input', updateUI);
     categoryFilter.addEventListener('change', updateUI);
     cancelBtn.addEventListener('click', resetForm);
     
+    // Modal Listeners
+    closeModalBtn.addEventListener('click', closeVariableModal);
+    generateCopyBtn.addEventListener('click', processAndCopyTemplate);
+    
     updateUI();
 }
 
-// --- VIEW NAVIGATION ---
+// --- VIEW NAVIGATION & UI ---
 function switchView(view) {
     currentView = view;
-    
-    // Update Navigation Active States
     [navAll, navFavorites, navPinned, navTrash].forEach(btn => btn.classList.remove('active'));
     
     if (view === 'all') {
@@ -91,7 +89,7 @@ function switchView(view) {
         navFavorites.classList.add('active');
         viewMain.classList.remove('hidden');
         viewTrash.classList.add('hidden');
-        formSection.classList.add('hidden'); // Hide form to focus on favorites
+        formSection.classList.add('hidden');
         viewHeader.style.display = 'block';
         viewTitle.innerText = '★ Favorite Prompts';
         viewSubtitle.innerText = 'Your most loved prompts.';
@@ -99,7 +97,7 @@ function switchView(view) {
         navPinned.classList.add('active');
         viewMain.classList.remove('hidden');
         viewTrash.classList.add('hidden');
-        formSection.classList.add('hidden'); // Hide form to focus on pins
+        formSection.classList.add('hidden');
         viewHeader.style.display = 'block';
         viewTitle.innerText = '📌 Pinned Prompts';
         viewSubtitle.innerText = 'Prompts kept at the top for quick access.';
@@ -108,70 +106,50 @@ function switchView(view) {
         viewMain.classList.add('hidden');
         viewTrash.classList.remove('hidden');
     }
-    
     updateUI();
 }
 
 function updateUI() {
-    if (currentView !== 'trash') {
-        renderActivePrompts();
-    } else {
-        renderTrashPrompts();
-    }
+    if (currentView !== 'trash') renderActivePrompts();
+    else renderTrashPrompts();
     updateCategoryFilter();
     trashCount.innerText = trashPrompts.length;
 }
 
-// --- RENDER LOGIC ---
+// --- RENDERING CARDS ---
 function renderActivePrompts() {
     promptGrid.innerHTML = '';
     const filterText = searchInput.value.toLowerCase();
     const filterCat = categoryFilter.value;
 
-    // 1. Filter by Search & Category
-    let filtered = activePrompts.filter(prompt => {
-        const matchesSearch = prompt.title.toLowerCase().includes(filterText) || 
-                              prompt.category.toLowerCase().includes(filterText);
-        const matchesCat = filterCat === 'all' || prompt.category === filterCat;
-        return matchesSearch && matchesCat;
-    });
+    let filtered = activePrompts.filter(p => 
+        (p.title.toLowerCase().includes(filterText) || p.category.toLowerCase().includes(filterText)) &&
+        (filterCat === 'all' || p.category === filterCat)
+    );
 
-    // 2. Filter by View State (Favorites / Pinned)
-    if (currentView === 'favorites') {
-        filtered = filtered.filter(p => p.isFavorite);
-    } else if (currentView === 'pinned') {
-        filtered = filtered.filter(p => p.isPinned);
-    }
+    if (currentView === 'favorites') filtered = filtered.filter(p => p.isFavorite);
+    else if (currentView === 'pinned') filtered = filtered.filter(p => p.isPinned);
 
-    // 3. Sort: Always put Pinned prompts at the top
     filtered.sort((a, b) => {
-        if (a.isPinned === b.isPinned) return 0; // Maintain natural order if same
-        return a.isPinned ? -1 : 1;              // Pinned comes first
+        if (a.isPinned === b.isPinned) return 0;
+        return a.isPinned ? -1 : 1;
     });
 
     if (filtered.length === 0) {
-        promptGrid.innerHTML = `<p style="color: var(--text-muted);">No prompts found in ${currentView} view.</p>`;
+        promptGrid.innerHTML = `<p style="color: var(--text-muted);">No prompts found.</p>`;
         return;
     }
 
-    filtered.forEach(prompt => {
-        const card = createCardHTML(prompt, 'active');
-        promptGrid.appendChild(card);
-    });
+    filtered.forEach(prompt => promptGrid.appendChild(createCardHTML(prompt, 'active')));
 }
 
 function renderTrashPrompts() {
     trashGrid.innerHTML = '';
-    
     if (trashPrompts.length === 0) {
         trashGrid.innerHTML = '<p style="color: var(--text-muted);">Trash is empty.</p>';
         return;
     }
-
-    trashPrompts.forEach(prompt => {
-        const card = createCardHTML(prompt, 'trash');
-        trashGrid.appendChild(card);
-    });
+    trashPrompts.forEach(prompt => trashGrid.appendChild(createCardHTML(prompt, 'trash')));
 }
 
 function createCardHTML(prompt, type) {
@@ -182,24 +160,25 @@ function createCardHTML(prompt, type) {
     let actionButtons = '';
 
     if (type === 'active') {
-        // Only show Pin/Star toggles if not in trash
         headerIcons = `
             <div class="card-toggles">
-                <button class="icon-btn ${prompt.isPinned ? 'active-pin' : ''}" onclick="togglePin('${prompt.id}')" title="Pin Prompt">📌</button>
-                <button class="icon-btn ${prompt.isFavorite ? 'active-fav' : ''}" onclick="toggleFavorite('${prompt.id}')" title="Favorite Prompt">★</button>
-            </div>
-        `;
+                <button class="icon-btn ${prompt.isPinned ? 'active-pin' : ''}" onclick="togglePin('${prompt.id}')">📌</button>
+                <button class="icon-btn ${prompt.isFavorite ? 'active-fav' : ''}" onclick="toggleFavorite('${prompt.id}')">★</button>
+            </div>`;
         actionButtons = `
-            <button class="btn-small btn-copy" onclick="copyText('${prompt.id}', this)">Copy</button>
+            <button class="btn-small btn-use" onclick="handleUsePrompt('${prompt.id}', this)">Use / Copy</button>
             <button class="btn-small btn-edit" onclick="editPrompt('${prompt.id}')">Edit</button>
             <button class="btn-small btn-delete" onclick="moveToTrash('${prompt.id}')">Delete</button>
         `;
     } else {
         actionButtons = `
             <button class="btn-small btn-restore" onclick="restorePrompt('${prompt.id}')">Restore</button>
-            <button class="btn-small btn-delete-perm" onclick="deletePermanently('${prompt.id}')">Delete Permanently</button>
+            <button class="btn-small btn-delete-perm" onclick="deletePermanently('${prompt.id}')">Delete Perm</button>
         `;
     }
+
+    // Highlight variables visually in the preview (optional UI enhancement)
+    const highlightedContent = escapeHTML(prompt.content).replace(/\{\{(.*?)\}\}/g, '<strong style="color:var(--primary-color)">{{$1}}</strong>');
 
     card.innerHTML = `
         <div class="prompt-header">
@@ -209,115 +188,91 @@ function createCardHTML(prompt, type) {
             </div>
             ${headerIcons}
         </div>
-        <div class="prompt-text">${escapeHTML(prompt.content)}</div>
-        <div class="prompt-actions">
-            ${actionButtons}
-        </div>
+        <div class="prompt-text">${highlightedContent}</div>
+        <div class="prompt-actions">${actionButtons}</div>
     `;
     return card;
 }
 
-// --- NEW TOGGLE ACTIONS ---
-function toggleFavorite(id) {
+// --- DYNAMIC VARIABLE SYSTEM ---
+
+// Regex Explanation: 
+// /\{\{        -> Matches exactly "{{"
+// \s*          -> Allows optional spaces before the variable name
+// ([^}]+?)     -> Captures everything that is NOT a "}" (this is the variable name itself)
+// \s*          -> Allows optional spaces after the variable name
+// \}\}/g       -> Matches exactly "}}" globally across the whole text
+const variableRegex = /\{\{\s*([^}]+?)\s*\}\}/g;
+
+function handleUsePrompt(id, btnElement) {
     const prompt = activePrompts.find(p => p.id === id);
-    if (prompt) {
-        prompt.isFavorite = !prompt.isFavorite;
-        saveData();
-    }
-}
+    if (!prompt) return;
 
-function togglePin(id) {
-    const prompt = activePrompts.find(p => p.id === id);
-    if (prompt) {
-        prompt.isPinned = !prompt.isPinned;
-        saveData();
-    }
-}
-
-// --- PROMPT ACTIONS (HOME) ---
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    const id = promptIdInput.value;
-    const newPrompt = {
-        id: id ? id : Date.now().toString(),
-        title: titleInput.value.trim(),
-        category: categoryInput.value.trim(),
-        content: contentInput.value.trim(),
-        isFavorite: false, // New prompts default to false
-        isPinned: false    // New prompts default to false
-    };
-
-    if (id) {
-        // Preserve existing pin/fav state when editing
-        const existingPrompt = activePrompts.find(p => p.id === id);
-        if (existingPrompt) {
-            newPrompt.isFavorite = existingPrompt.isFavorite;
-            newPrompt.isPinned = existingPrompt.isPinned;
-        }
-        
-        const index = activePrompts.findIndex(p => p.id === id);
-        activePrompts[index] = newPrompt;
+    // Find all variables in the text
+    const matches = [...prompt.content.matchAll(variableRegex)];
+    
+    if (matches.length > 0) {
+        // Extract unique variable names (e.g., if {{name}} appears twice, only ask once)
+        const uniqueVars = [...new Set(matches.map(m => m[1].trim()))];
+        openVariableModal(prompt.content, uniqueVars, btnElement);
     } else {
-        activePrompts.unshift(newPrompt);
-    }
-
-    saveData();
-    resetForm();
-});
-
-function editPrompt(id) {
-    const prompt = activePrompts.find(p => p.id === id);
-    if (!prompt) return;
-
-    promptIdInput.value = prompt.id;
-    titleInput.value = prompt.title;
-    categoryInput.value = prompt.category;
-    contentInput.value = prompt.content;
-
-    // Switch to 'All' view to ensure form is visible
-    switchView('all');
-
-    formTitle.innerText = 'Edit Prompt';
-    submitBtn.innerText = 'Update Prompt';
-    cancelBtn.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function moveToTrash(id) {
-    const index = activePrompts.findIndex(p => p.id === id);
-    if (index > -1) {
-        const [deletedPrompt] = activePrompts.splice(index, 1);
-        trashPrompts.unshift(deletedPrompt); 
-        saveData();
+        // If no variables, just copy directly like standard behavior
+        executeCopy(prompt.content, btnElement);
     }
 }
 
-// --- PROMPT ACTIONS (TRASH) ---
-function restorePrompt(id) {
-    const index = trashPrompts.findIndex(p => p.id === id);
-    if (index > -1) {
-        const [restoredPrompt] = trashPrompts.splice(index, 1);
-        activePrompts.unshift(restoredPrompt); 
-        saveData();
-    }
+function openVariableModal(textTemplate, variables, btnElement) {
+    currentTemplateText = textTemplate;
+    currentTriggerButton = btnElement;
+    dynamicInputsContainer.innerHTML = ''; // Clear old inputs
+
+    // Generate HTML inputs for each variable
+    variables.forEach(varName => {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        
+        // Format variable name for label (e.g., brand_name -> Brand Name)
+        const cleanLabel = varName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+        div.innerHTML = `
+            <label for="var_${varName}">${cleanLabel}</label>
+            <input type="text" id="var_${varName}" data-var="${varName}" class="dynamic-var-input" placeholder="Enter ${cleanLabel}..." required>
+        `;
+        dynamicInputsContainer.appendChild(div);
+    });
+
+    variableModal.classList.remove('hidden');
+    // Auto-focus first input
+    setTimeout(() => document.querySelector('.dynamic-var-input').focus(), 100);
 }
 
-function deletePermanently(id) {
-    if (confirm('Permanently delete this prompt? This cannot be undone.')) {
-        trashPrompts = trashPrompts.filter(p => p.id !== id);
-        saveData();
-    }
+function closeVariableModal() {
+    variableModal.classList.add('hidden');
+    currentTemplateText = '';
+    currentTriggerButton = null;
 }
 
-// --- UTILITIES ---
-async function copyText(id, btnElement) {
-    // Find in both arrays just in case, though usually called from active
-    let prompt = activePrompts.find(p => p.id === id) || trashPrompts.find(p => p.id === id);
-    if (!prompt) return;
+function processAndCopyTemplate() {
+    let finalPrompt = currentTemplateText;
+    const inputs = document.querySelectorAll('.dynamic-var-input');
+    
+    // Replace all variables in the template with user inputs
+    inputs.forEach(input => {
+        const varName = input.getAttribute('data-var');
+        const userValue = input.value || `[${varName}]`; // fallback if left empty
+        
+        // Dynamically build a regex to replace THIS specific variable globally
+        const replaceRegex = new RegExp(`\\{\\{\\s*${varName}\\s*\\}\\}`, 'g');
+        finalPrompt = finalPrompt.replace(replaceRegex, userValue);
+    });
 
+    executeCopy(finalPrompt, currentTriggerButton);
+    closeVariableModal();
+}
+
+async function executeCopy(textToCopy, btnElement) {
     try {
-        await navigator.clipboard.writeText(prompt.content);
+        await navigator.clipboard.writeText(textToCopy);
         const originalText = btnElement.innerText;
         btnElement.innerText = 'Copied!';
         btnElement.style.backgroundColor = '#059669'; 
@@ -327,42 +282,78 @@ async function copyText(id, btnElement) {
             btnElement.style.backgroundColor = ''; 
         }, 2000);
     } catch (err) {
-        alert('Failed to copy text.');
+        alert('Failed to copy. Please check browser permissions.');
     }
 }
 
+// --- STANDARD CRUD ACTIONS ---
+form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = promptIdInput.value;
+    const newPrompt = {
+        id: id || Date.now().toString(),
+        title: titleInput.value.trim(),
+        category: categoryInput.value.trim(),
+        content: contentInput.value.trim(),
+        isFavorite: false, 
+        isPinned: false
+    };
+
+    if (id) {
+        const existing = activePrompts.find(p => p.id === id);
+        if (existing) { newPrompt.isFavorite = existing.isFavorite; newPrompt.isPinned = existing.isPinned; }
+        const index = activePrompts.findIndex(p => p.id === id);
+        activePrompts[index] = newPrompt;
+    } else {
+        activePrompts.unshift(newPrompt);
+    }
+    saveData();
+    resetForm();
+});
+
+function editPrompt(id) {
+    const p = activePrompts.find(p => p.id === id);
+    if (!p) return;
+    promptIdInput.value = p.id; titleInput.value = p.title; categoryInput.value = p.category; contentInput.value = p.content;
+    switchView('all');
+    formTitle.innerText = 'Edit Prompt'; submitBtn.innerText = 'Update Prompt'; cancelBtn.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function moveToTrash(id) {
+    const index = activePrompts.findIndex(p => p.id === id);
+    if (index > -1) { trashPrompts.unshift(activePrompts.splice(index, 1)[0]); saveData(); }
+}
+function restorePrompt(id) {
+    const index = trashPrompts.findIndex(p => p.id === id);
+    if (index > -1) { activePrompts.unshift(trashPrompts.splice(index, 1)[0]); saveData(); }
+}
+function deletePermanently(id) {
+    if (confirm('Permanently delete?')) { trashPrompts = trashPrompts.filter(p => p.id !== id); saveData(); }
+}
+function toggleFavorite(id) {
+    const p = activePrompts.find(p => p.id === id); if (p) { p.isFavorite = !p.isFavorite; saveData(); }
+}
+function togglePin(id) {
+    const p = activePrompts.find(p => p.id === id); if (p) { p.isPinned = !p.isPinned; saveData(); }
+}
+
+// --- UTILITIES ---
 function updateCategoryFilter() {
     const sourceArray = currentView === 'trash' ? trashPrompts : activePrompts;
     const categories = [...new Set(sourceArray.map(p => p.category))];
-    const currentValue = categoryFilter.value;
-    
+    const currentVal = categoryFilter.value;
     categoryFilter.innerHTML = '<option value="all">All Categories</option>';
-    categories.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat;
-        option.textContent = cat;
-        categoryFilter.appendChild(option);
-    });
-
-    if (categories.includes(currentValue)) {
-        categoryFilter.value = currentValue;
-    }
+    categories.forEach(cat => categoryFilter.innerHTML += `<option value="${cat}">${cat}</option>`);
+    if (categories.includes(currentVal)) categoryFilter.value = currentVal;
 }
 
 function resetForm() {
-    form.reset();
-    promptIdInput.value = '';
-    formTitle.innerText = 'Add New Prompt';
-    submitBtn.innerText = 'Save Prompt';
-    cancelBtn.classList.add('hidden');
+    form.reset(); promptIdInput.value = ''; formTitle.innerText = 'Add New Prompt'; submitBtn.innerText = 'Save Prompt'; cancelBtn.classList.add('hidden');
 }
 
 function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-        }[tag])
-    );
+    return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t]));
 }
 
 // Start App
