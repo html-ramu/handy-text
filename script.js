@@ -7,7 +7,7 @@ import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstat
 // --- PASTE YOUR FIREBASE CONFIG HERE ---
 // You get this from Firebase Console > Project Settings > Your Apps
 const firebaseConfig = {
-    apiKey: "AIzaSyCkMxoG1D5J63TNyMQaV0A-SCvojTzUPoI",
+    apiKey: "AIzaSyCkMxoG1D5J63TNyMQaVOA-SCvojTzUPoI",
     authDomain: "handy-text.firebaseapp.com",
     projectId: "handy-text",
     storageBucket: "handy-text.firebasestorage.app",
