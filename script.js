@@ -1,7 +1,41 @@
-// State Management
-let prompts = JSON.parse(localStorage.getItem('handyTextPrompts')) || [];
+// --- STATE MANAGEMENT & MIGRATION ---
+let activePrompts = [];
+let trashPrompts = [];
 
-// DOM Elements
+function loadAndMigrateData() {
+    // 1. Load data from the new separate keys
+    const loadedActive = JSON.parse(localStorage.getItem('handyTextActivePrompts'));
+    const loadedTrash = JSON.parse(localStorage.getItem('handyTextTrashPrompts'));
+
+    // 2. Data Migration: If new keys don't exist, check for the old v1 key
+    if (!loadedActive && !loadedTrash) {
+        const oldData = JSON.parse(localStorage.getItem('handyTextPrompts'));
+        if (oldData) {
+            activePrompts = oldData; // Move old data to active array
+            localStorage.removeItem('handyTextPrompts'); // Clean up old key
+        }
+    } else {
+        // Normal loading
+        activePrompts = loadedActive || [];
+        trashPrompts = loadedTrash || [];
+    }
+    
+    saveData(); // Ensure the new structure is saved immediately
+}
+
+function saveData() {
+    localStorage.setItem('handyTextActivePrompts', JSON.stringify(activePrompts));
+    localStorage.setItem('handyTextTrashPrompts', JSON.stringify(trashPrompts));
+    updateUI();
+}
+
+// --- DOM ELEMENTS ---
+const viewHome = document.getElementById('viewHome');
+const viewTrash = document.getElementById('viewTrash');
+const navHome = document.getElementById('navHome');
+const navTrash = document.getElementById('navTrash');
+const trashCount = document.getElementById('trashCount');
+
 const form = document.getElementById('promptForm');
 const promptIdInput = document.getElementById('promptId');
 const titleInput = document.getElementById('title');
@@ -10,59 +44,118 @@ const contentInput = document.getElementById('content');
 const formTitle = document.getElementById('formTitle');
 const submitBtn = document.getElementById('submitBtn');
 const cancelBtn = document.getElementById('cancelBtn');
+
 const promptGrid = document.getElementById('promptGrid');
+const trashGrid = document.getElementById('trashGrid');
 const searchInput = document.getElementById('searchInput');
 const categoryFilter = document.getElementById('categoryFilter');
 
-// Initialization
+// --- INITIALIZATION ---
 function init() {
-    renderPrompts();
-    updateCategoryFilter();
+    loadAndMigrateData();
+    
+    // Setup View Event Listeners
+    navHome.addEventListener('click', () => switchView('home'));
+    navTrash.addEventListener('click', () => switchView('trash'));
+    
+    // Setup Search/Filter Listeners
+    searchInput.addEventListener('input', updateUI);
+    categoryFilter.addEventListener('change', updateUI);
+    cancelBtn.addEventListener('click', resetForm);
 }
 
-// Save to LocalStorage
-function savePrompts() {
-    localStorage.setItem('handyTextPrompts', JSON.stringify(prompts));
+function updateUI() {
+    renderActivePrompts();
+    renderTrashPrompts();
     updateCategoryFilter();
+    trashCount.innerText = trashPrompts.length; // Update the badge number
 }
 
-// Render Prompts to UI
-function renderPrompts(filterText = '', filterCategory = 'all') {
+// --- VIEW NAVIGATION ---
+function switchView(view) {
+    if (view === 'home') {
+        viewHome.classList.remove('hidden');
+        viewTrash.classList.add('hidden');
+        navHome.classList.add('active');
+        navTrash.classList.remove('active');
+    } else if (view === 'trash') {
+        viewHome.classList.add('hidden');
+        viewTrash.classList.remove('hidden');
+        navHome.classList.remove('active');
+        navTrash.classList.add('active');
+    }
+}
+
+// --- RENDER LOGIC ---
+function renderActivePrompts() {
     promptGrid.innerHTML = '';
+    const filterText = searchInput.value.toLowerCase();
+    const filterCat = categoryFilter.value;
 
-    const filteredPrompts = prompts.filter(prompt => {
-        const matchesSearch = prompt.title.toLowerCase().includes(filterText.toLowerCase()) || 
-                              prompt.category.toLowerCase().includes(filterText.toLowerCase());
-        const matchesCategory = filterCategory === 'all' || prompt.category === filterCategory;
-        return matchesSearch && matchesCategory;
+    const filtered = activePrompts.filter(prompt => {
+        const matchesSearch = prompt.title.toLowerCase().includes(filterText) || 
+                              prompt.category.toLowerCase().includes(filterText);
+        const matchesCat = filterCat === 'all' || prompt.category === filterCat;
+        return matchesSearch && matchesCat;
     });
 
-    if (filteredPrompts.length === 0) {
-        promptGrid.innerHTML = '<p style="color: var(--text-muted);">No prompts found.</p>';
+    if (filtered.length === 0) {
+        promptGrid.innerHTML = '<p style="color: var(--text-muted);">No active prompts found.</p>';
         return;
     }
 
-    filteredPrompts.forEach(prompt => {
-        const card = document.createElement('div');
-        card.className = 'prompt-card';
-        
-        card.innerHTML = `
-            <div class="prompt-header">
-                <h3>${escapeHTML(prompt.title)}</h3>
-                <span class="prompt-category">${escapeHTML(prompt.category)}</span>
-            </div>
-            <div class="prompt-text">${escapeHTML(prompt.content)}</div>
-            <div class="prompt-actions">
-                <button class="btn-small btn-copy" onclick="copyText('${prompt.id}', this)">Copy</button>
-                <button class="btn-small btn-edit" onclick="editPrompt('${prompt.id}')">Edit</button>
-                <button class="btn-small btn-delete" onclick="deletePrompt('${prompt.id}')">Delete</button>
-            </div>
-        `;
+    filtered.forEach(prompt => {
+        const card = createCardHTML(prompt, 'active');
         promptGrid.appendChild(card);
     });
 }
 
-// Add or Update Prompt
+function renderTrashPrompts() {
+    trashGrid.innerHTML = '';
+    
+    if (trashPrompts.length === 0) {
+        trashGrid.innerHTML = '<p style="color: var(--text-muted);">Trash is empty.</p>';
+        return;
+    }
+
+    trashPrompts.forEach(prompt => {
+        const card = createCardHTML(prompt, 'trash');
+        trashGrid.appendChild(card);
+    });
+}
+
+function createCardHTML(prompt, type) {
+    const card = document.createElement('div');
+    card.className = 'prompt-card';
+    
+    let actionButtons = '';
+    if (type === 'active') {
+        actionButtons = `
+            <button class="btn-small btn-copy" onclick="copyText('${prompt.id}', this)">Copy</button>
+            <button class="btn-small btn-edit" onclick="editPrompt('${prompt.id}')">Edit</button>
+            <button class="btn-small btn-delete" onclick="moveToTrash('${prompt.id}')">Delete</button>
+        `;
+    } else {
+        actionButtons = `
+            <button class="btn-small btn-restore" onclick="restorePrompt('${prompt.id}')">Restore</button>
+            <button class="btn-small btn-delete-perm" onclick="deletePermanently('${prompt.id}')">Delete Permanently</button>
+        `;
+    }
+
+    card.innerHTML = `
+        <div class="prompt-header">
+            <h3>${escapeHTML(prompt.title)}</h3>
+            <span class="prompt-category">${escapeHTML(prompt.category)}</span>
+        </div>
+        <div class="prompt-text">${escapeHTML(prompt.content)}</div>
+        <div class="prompt-actions">
+            ${actionButtons}
+        </div>
+    `;
+    return card;
+}
+
+// --- PROMPT ACTIONS (HOME) ---
 form.addEventListener('submit', (e) => {
     e.preventDefault();
 
@@ -75,22 +168,18 @@ form.addEventListener('submit', (e) => {
     };
 
     if (id) {
-        // Update existing
-        const index = prompts.findIndex(p => p.id === id);
-        prompts[index] = newPrompt;
+        const index = activePrompts.findIndex(p => p.id === id);
+        activePrompts[index] = newPrompt;
     } else {
-        // Add new
-        prompts.unshift(newPrompt); // Add to beginning of array
+        activePrompts.unshift(newPrompt);
     }
 
-    savePrompts();
-    renderPrompts();
+    saveData();
     resetForm();
 });
 
-// Edit Prompt (Populate Form)
 function editPrompt(id) {
-    const prompt = prompts.find(p => p.id === id);
+    const prompt = activePrompts.find(p => p.id === id);
     if (!prompt) return;
 
     promptIdInput.value = prompt.id;
@@ -101,43 +190,58 @@ function editPrompt(id) {
     formTitle.innerText = 'Edit Prompt';
     submitBtn.innerText = 'Update Prompt';
     cancelBtn.classList.remove('hidden');
-    
-    // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Delete Prompt
-function deletePrompt(id) {
-    if (confirm('Are you sure you want to delete this prompt?')) {
-        prompts = prompts.filter(p => p.id !== id);
-        savePrompts();
-        renderPrompts(searchInput.value, categoryFilter.value);
+// Move to Trash (Soft Delete)
+function moveToTrash(id) {
+    const index = activePrompts.findIndex(p => p.id === id);
+    if (index > -1) {
+        const [deletedPrompt] = activePrompts.splice(index, 1);
+        trashPrompts.unshift(deletedPrompt); // Add to beginning of trash
+        saveData();
     }
 }
 
-// Copy to Clipboard
+// --- PROMPT ACTIONS (TRASH) ---
+function restorePrompt(id) {
+    const index = trashPrompts.findIndex(p => p.id === id);
+    if (index > -1) {
+        const [restoredPrompt] = trashPrompts.splice(index, 1);
+        activePrompts.unshift(restoredPrompt); // Bring back to top of active list
+        saveData();
+    }
+}
+
+function deletePermanently(id) {
+    if (confirm('Are you sure you want to permanently delete this prompt? This cannot be undone.')) {
+        trashPrompts = trashPrompts.filter(p => p.id !== id);
+        saveData();
+    }
+}
+
+// --- UTILITIES ---
 async function copyText(id, btnElement) {
-    const prompt = prompts.find(p => p.id === id);
+    const prompt = activePrompts.find(p => p.id === id);
     if (!prompt) return;
 
     try {
         await navigator.clipboard.writeText(prompt.content);
         const originalText = btnElement.innerText;
         btnElement.innerText = 'Copied!';
-        btnElement.style.backgroundColor = '#059669'; // Darker success color
+        btnElement.style.backgroundColor = '#059669'; 
         
         setTimeout(() => {
             btnElement.innerText = originalText;
-            btnElement.style.backgroundColor = ''; // Reset to CSS class default
+            btnElement.style.backgroundColor = ''; 
         }, 2000);
     } catch (err) {
-        alert('Failed to copy text. Please copy manually.');
+        alert('Failed to copy text.');
     }
 }
 
-// Dynamic Category Dropdown
 function updateCategoryFilter() {
-    const categories = [...new Set(prompts.map(p => p.category))];
+    const categories = [...new Set(activePrompts.map(p => p.category))];
     const currentValue = categoryFilter.value;
     
     categoryFilter.innerHTML = '<option value="all">All Categories</option>';
@@ -148,18 +252,11 @@ function updateCategoryFilter() {
         categoryFilter.appendChild(option);
     });
 
-    // Restore selected value if it still exists
     if (categories.includes(currentValue)) {
         categoryFilter.value = currentValue;
     }
 }
 
-// Event Listeners for Search and Filter
-searchInput.addEventListener('input', (e) => renderPrompts(e.target.value, categoryFilter.value));
-categoryFilter.addEventListener('change', (e) => renderPrompts(searchInput.value, e.target.value));
-cancelBtn.addEventListener('click', resetForm);
-
-// Reset Form State
 function resetForm() {
     form.reset();
     promptIdInput.value = '';
@@ -168,7 +265,6 @@ function resetForm() {
     cancelBtn.classList.add('hidden');
 }
 
-// Utility: Escape HTML to prevent XSS (since we use innerHTML for card generation)
 function escapeHTML(str) {
     return str.replace(/[&<>'"]/g, 
         tag => ({

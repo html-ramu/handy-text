@@ -9,49 +9,62 @@
 <body>
     <div class="container">
         <header>
-            <h1>Handy-Text</h1>
-            <p>Your personal prompt repository</p>
+            <div class="header-titles">
+                <h1>Handy-Text</h1>
+                <p>Your personal prompt repository</p>
+            </div>
+            <nav class="header-nav">
+                <button id="navHome" class="nav-btn active">Home</button>
+                <button id="navTrash" class="nav-btn">Trash <span id="trashCount" class="badge">0</span></button>
+            </nav>
         </header>
 
-        <!-- Form for Adding/Editing Prompts -->
-        <section class="form-card">
-            <h2 id="formTitle">Add New Prompt</h2>
-            <form id="promptForm">
-                <input type="hidden" id="promptId">
-                
-                <div class="form-group">
-                    <label for="title">Title</label>
-                    <input type="text" id="title" placeholder="e.g., Code Review Prompt" required>
-                </div>
+        <main id="viewHome">
+            <section class="form-card">
+                <h2 id="formTitle">Add New Prompt</h2>
+                <form id="promptForm">
+                    <input type="hidden" id="promptId">
+                    
+                    <div class="form-group">
+                        <label for="title">Title</label>
+                        <input type="text" id="title" placeholder="e.g., Code Review Prompt" required>
+                    </div>
 
-                <div class="form-group">
-                    <label for="category">Category</label>
-                    <input type="text" id="category" placeholder="e.g., Development, SEO, General" required>
-                </div>
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <input type="text" id="category" placeholder="e.g., Development, SEO, General" required>
+                    </div>
 
-                <div class="form-group">
-                    <label for="content">Prompt Text</label>
-                    <textarea id="content" rows="4" placeholder="Type your prompt here..." required></textarea>
-                </div>
+                    <div class="form-group">
+                        <label for="content">Prompt Text</label>
+                        <textarea id="content" rows="4" placeholder="Type your prompt here..." required></textarea>
+                    </div>
 
-                <button type="submit" id="submitBtn" class="btn-primary">Save Prompt</button>
-                <button type="button" id="cancelBtn" class="btn-secondary hidden">Cancel Edit</button>
-            </form>
-        </section>
+                    <button type="submit" id="submitBtn" class="btn-primary">Save Prompt</button>
+                    <button type="button" id="cancelBtn" class="btn-secondary hidden">Cancel Edit</button>
+                </form>
+            </section>
 
-        <!-- Search and Filter -->
-        <section class="controls">
-            <input type="text" id="searchInput" placeholder="Search prompts by title or category...">
-            <select id="categoryFilter">
-                <option value="all">All Categories</option>
-                <!-- Categories populated dynamically -->
-            </select>
-        </section>
+            <section class="controls">
+                <input type="text" id="searchInput" placeholder="Search prompts by title or category...">
+                <select id="categoryFilter">
+                    <option value="all">All Categories</option>
+                    </select>
+            </section>
 
-        <!-- Prompt Cards Grid -->
-        <section class="prompt-grid" id="promptGrid">
-            <!-- Cards will be injected here by JavaScript -->
-        </section>
+            <section class="prompt-grid" id="promptGrid">
+                </section>
+        </main>
+
+        <main id="viewTrash" class="hidden">
+            <div class="trash-header">
+                <h2>Trash</h2>
+                <p>Deleted prompts stay here. You can restore them or delete them permanently.</p>
+            </div>
+            
+            <section class="prompt-grid" id="trashGrid">
+                </section>
+        </main>
     </div>
 
     <script src="script.js"></script>
