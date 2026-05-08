@@ -13,14 +13,26 @@
                 <h1>Handy-Text</h1>
                 <p>Your personal prompt repository</p>
             </div>
+            <!-- Expanded Navigation for Filtering -->
             <nav class="header-nav">
-                <button id="navHome" class="nav-btn active">Home</button>
-                <button id="navTrash" class="nav-btn">Trash <span id="trashCount" class="badge">0</span></button>
+                <button id="navAll" class="nav-btn active">All</button>
+                <button id="navFavorites" class="nav-btn">★ Favorites</button>
+                <button id="navPinned" class="nav-btn">📌 Pinned</button>
+                <button id="navTrash" class="nav-btn">🗑️ Trash <span id="trashCount" class="badge">0</span></button>
             </nav>
         </header>
 
-        <main id="viewHome">
-            <section class="form-card">
+        <!-- MAIN VIEW (All, Favorites, Pinned) -->
+        <main id="viewMain">
+            
+            <!-- Dynamic Header for current view -->
+            <div class="view-header" id="viewHeader" style="display: none;">
+                <h2 id="viewTitle">View</h2>
+                <p id="viewSubtitle">Description</p>
+            </div>
+
+            <!-- Form for Adding/Editing Prompts (Hidden in Fav/Pinned views to save space) -->
+            <section class="form-card" id="formSection">
                 <h2 id="formTitle">Add New Prompt</h2>
                 <form id="promptForm">
                     <input type="hidden" id="promptId">
@@ -45,17 +57,22 @@
                 </form>
             </section>
 
+            <!-- Search and Filter -->
             <section class="controls">
                 <input type="text" id="searchInput" placeholder="Search prompts by title or category...">
                 <select id="categoryFilter">
                     <option value="all">All Categories</option>
-                    </select>
+                    <!-- Categories populated dynamically -->
+                </select>
             </section>
 
+            <!-- Active Prompt Cards Grid -->
             <section class="prompt-grid" id="promptGrid">
-                </section>
+                <!-- Active cards injected here -->
+            </section>
         </main>
 
+        <!-- TRASH VIEW (Deleted Prompts) -->
         <main id="viewTrash" class="hidden">
             <div class="trash-header">
                 <h2>Trash</h2>
@@ -63,7 +80,8 @@
             </div>
             
             <section class="prompt-grid" id="trashGrid">
-                </section>
+                <!-- Trash cards injected here -->
+            </section>
         </main>
     </div>
 

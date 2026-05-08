@@ -1,26 +1,25 @@
 // --- STATE MANAGEMENT & MIGRATION ---
 let activePrompts = [];
 let trashPrompts = [];
+let currentView = 'all'; // can be 'all', 'favorites', 'pinned', 'trash'
 
 function loadAndMigrateData() {
-    // 1. Load data from the new separate keys
     const loadedActive = JSON.parse(localStorage.getItem('handyTextActivePrompts'));
     const loadedTrash = JSON.parse(localStorage.getItem('handyTextTrashPrompts'));
 
-    // 2. Data Migration: If new keys don't exist, check for the old v1 key
-    if (!loadedActive && !loadedTrash) {
-        const oldData = JSON.parse(localStorage.getItem('handyTextPrompts'));
-        if (oldData) {
-            activePrompts = oldData; // Move old data to active array
-            localStorage.removeItem('handyTextPrompts'); // Clean up old key
-        }
+    // Migrate active prompts to ensure they have the new Pin/Favorite properties
+    if (loadedActive) {
+        activePrompts = loadedActive.map(p => ({
+            ...p,
+            isFavorite: p.isFavorite || false, // Add default false if missing
+            isPinned: p.isPinned || false      // Add default false if missing
+        }));
     } else {
-        // Normal loading
-        activePrompts = loadedActive || [];
-        trashPrompts = loadedTrash || [];
+        activePrompts = [];
     }
-    
-    saveData(); // Ensure the new structure is saved immediately
+
+    trashPrompts = loadedTrash || [];
+    saveData(); 
 }
 
 function saveData() {
@@ -30,9 +29,16 @@ function saveData() {
 }
 
 // --- DOM ELEMENTS ---
-const viewHome = document.getElementById('viewHome');
+const viewMain = document.getElementById('viewMain');
 const viewTrash = document.getElementById('viewTrash');
-const navHome = document.getElementById('navHome');
+const formSection = document.getElementById('formSection');
+const viewHeader = document.getElementById('viewHeader');
+const viewTitle = document.getElementById('viewTitle');
+const viewSubtitle = document.getElementById('viewSubtitle');
+
+const navAll = document.getElementById('navAll');
+const navFavorites = document.getElementById('navFavorites');
+const navPinned = document.getElementById('navPinned');
 const navTrash = document.getElementById('navTrash');
 const trashCount = document.getElementById('trashCount');
 
@@ -55,35 +61,65 @@ function init() {
     loadAndMigrateData();
     
     // Setup View Event Listeners
-    navHome.addEventListener('click', () => switchView('home'));
+    navAll.addEventListener('click', () => switchView('all'));
+    navFavorites.addEventListener('click', () => switchView('favorites'));
+    navPinned.addEventListener('click', () => switchView('pinned'));
     navTrash.addEventListener('click', () => switchView('trash'));
     
     // Setup Search/Filter Listeners
     searchInput.addEventListener('input', updateUI);
     categoryFilter.addEventListener('change', updateUI);
     cancelBtn.addEventListener('click', resetForm);
-}
-
-function updateUI() {
-    renderActivePrompts();
-    renderTrashPrompts();
-    updateCategoryFilter();
-    trashCount.innerText = trashPrompts.length; // Update the badge number
+    
+    updateUI();
 }
 
 // --- VIEW NAVIGATION ---
 function switchView(view) {
-    if (view === 'home') {
-        viewHome.classList.remove('hidden');
+    currentView = view;
+    
+    // Update Navigation Active States
+    [navAll, navFavorites, navPinned, navTrash].forEach(btn => btn.classList.remove('active'));
+    
+    if (view === 'all') {
+        navAll.classList.add('active');
+        viewMain.classList.remove('hidden');
         viewTrash.classList.add('hidden');
-        navHome.classList.add('active');
-        navTrash.classList.remove('active');
+        formSection.classList.remove('hidden');
+        viewHeader.style.display = 'none';
+    } else if (view === 'favorites') {
+        navFavorites.classList.add('active');
+        viewMain.classList.remove('hidden');
+        viewTrash.classList.add('hidden');
+        formSection.classList.add('hidden'); // Hide form to focus on favorites
+        viewHeader.style.display = 'block';
+        viewTitle.innerText = '★ Favorite Prompts';
+        viewSubtitle.innerText = 'Your most loved prompts.';
+    } else if (view === 'pinned') {
+        navPinned.classList.add('active');
+        viewMain.classList.remove('hidden');
+        viewTrash.classList.add('hidden');
+        formSection.classList.add('hidden'); // Hide form to focus on pins
+        viewHeader.style.display = 'block';
+        viewTitle.innerText = '📌 Pinned Prompts';
+        viewSubtitle.innerText = 'Prompts kept at the top for quick access.';
     } else if (view === 'trash') {
-        viewHome.classList.add('hidden');
-        viewTrash.classList.remove('hidden');
-        navHome.classList.remove('active');
         navTrash.classList.add('active');
+        viewMain.classList.add('hidden');
+        viewTrash.classList.remove('hidden');
     }
+    
+    updateUI();
+}
+
+function updateUI() {
+    if (currentView !== 'trash') {
+        renderActivePrompts();
+    } else {
+        renderTrashPrompts();
+    }
+    updateCategoryFilter();
+    trashCount.innerText = trashPrompts.length;
 }
 
 // --- RENDER LOGIC ---
@@ -92,15 +128,29 @@ function renderActivePrompts() {
     const filterText = searchInput.value.toLowerCase();
     const filterCat = categoryFilter.value;
 
-    const filtered = activePrompts.filter(prompt => {
+    // 1. Filter by Search & Category
+    let filtered = activePrompts.filter(prompt => {
         const matchesSearch = prompt.title.toLowerCase().includes(filterText) || 
                               prompt.category.toLowerCase().includes(filterText);
         const matchesCat = filterCat === 'all' || prompt.category === filterCat;
         return matchesSearch && matchesCat;
     });
 
+    // 2. Filter by View State (Favorites / Pinned)
+    if (currentView === 'favorites') {
+        filtered = filtered.filter(p => p.isFavorite);
+    } else if (currentView === 'pinned') {
+        filtered = filtered.filter(p => p.isPinned);
+    }
+
+    // 3. Sort: Always put Pinned prompts at the top
+    filtered.sort((a, b) => {
+        if (a.isPinned === b.isPinned) return 0; // Maintain natural order if same
+        return a.isPinned ? -1 : 1;              // Pinned comes first
+    });
+
     if (filtered.length === 0) {
-        promptGrid.innerHTML = '<p style="color: var(--text-muted);">No active prompts found.</p>';
+        promptGrid.innerHTML = `<p style="color: var(--text-muted);">No prompts found in ${currentView} view.</p>`;
         return;
     }
 
@@ -126,10 +176,19 @@ function renderTrashPrompts() {
 
 function createCardHTML(prompt, type) {
     const card = document.createElement('div');
-    card.className = 'prompt-card';
+    card.className = `prompt-card ${prompt.isPinned ? 'is-pinned' : ''}`;
     
+    let headerIcons = '';
     let actionButtons = '';
+
     if (type === 'active') {
+        // Only show Pin/Star toggles if not in trash
+        headerIcons = `
+            <div class="card-toggles">
+                <button class="icon-btn ${prompt.isPinned ? 'active-pin' : ''}" onclick="togglePin('${prompt.id}')" title="Pin Prompt">📌</button>
+                <button class="icon-btn ${prompt.isFavorite ? 'active-fav' : ''}" onclick="toggleFavorite('${prompt.id}')" title="Favorite Prompt">★</button>
+            </div>
+        `;
         actionButtons = `
             <button class="btn-small btn-copy" onclick="copyText('${prompt.id}', this)">Copy</button>
             <button class="btn-small btn-edit" onclick="editPrompt('${prompt.id}')">Edit</button>
@@ -144,8 +203,11 @@ function createCardHTML(prompt, type) {
 
     card.innerHTML = `
         <div class="prompt-header">
-            <h3>${escapeHTML(prompt.title)}</h3>
-            <span class="prompt-category">${escapeHTML(prompt.category)}</span>
+            <div class="title-group">
+                <h3>${escapeHTML(prompt.title)}</h3>
+                <span class="prompt-category">${escapeHTML(prompt.category)}</span>
+            </div>
+            ${headerIcons}
         </div>
         <div class="prompt-text">${escapeHTML(prompt.content)}</div>
         <div class="prompt-actions">
@@ -153,6 +215,23 @@ function createCardHTML(prompt, type) {
         </div>
     `;
     return card;
+}
+
+// --- NEW TOGGLE ACTIONS ---
+function toggleFavorite(id) {
+    const prompt = activePrompts.find(p => p.id === id);
+    if (prompt) {
+        prompt.isFavorite = !prompt.isFavorite;
+        saveData();
+    }
+}
+
+function togglePin(id) {
+    const prompt = activePrompts.find(p => p.id === id);
+    if (prompt) {
+        prompt.isPinned = !prompt.isPinned;
+        saveData();
+    }
 }
 
 // --- PROMPT ACTIONS (HOME) ---
@@ -164,10 +243,19 @@ form.addEventListener('submit', (e) => {
         id: id ? id : Date.now().toString(),
         title: titleInput.value.trim(),
         category: categoryInput.value.trim(),
-        content: contentInput.value.trim()
+        content: contentInput.value.trim(),
+        isFavorite: false, // New prompts default to false
+        isPinned: false    // New prompts default to false
     };
 
     if (id) {
+        // Preserve existing pin/fav state when editing
+        const existingPrompt = activePrompts.find(p => p.id === id);
+        if (existingPrompt) {
+            newPrompt.isFavorite = existingPrompt.isFavorite;
+            newPrompt.isPinned = existingPrompt.isPinned;
+        }
+        
         const index = activePrompts.findIndex(p => p.id === id);
         activePrompts[index] = newPrompt;
     } else {
@@ -187,18 +275,20 @@ function editPrompt(id) {
     categoryInput.value = prompt.category;
     contentInput.value = prompt.content;
 
+    // Switch to 'All' view to ensure form is visible
+    switchView('all');
+
     formTitle.innerText = 'Edit Prompt';
     submitBtn.innerText = 'Update Prompt';
     cancelBtn.classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Move to Trash (Soft Delete)
 function moveToTrash(id) {
     const index = activePrompts.findIndex(p => p.id === id);
     if (index > -1) {
         const [deletedPrompt] = activePrompts.splice(index, 1);
-        trashPrompts.unshift(deletedPrompt); // Add to beginning of trash
+        trashPrompts.unshift(deletedPrompt); 
         saveData();
     }
 }
@@ -208,13 +298,13 @@ function restorePrompt(id) {
     const index = trashPrompts.findIndex(p => p.id === id);
     if (index > -1) {
         const [restoredPrompt] = trashPrompts.splice(index, 1);
-        activePrompts.unshift(restoredPrompt); // Bring back to top of active list
+        activePrompts.unshift(restoredPrompt); 
         saveData();
     }
 }
 
 function deletePermanently(id) {
-    if (confirm('Are you sure you want to permanently delete this prompt? This cannot be undone.')) {
+    if (confirm('Permanently delete this prompt? This cannot be undone.')) {
         trashPrompts = trashPrompts.filter(p => p.id !== id);
         saveData();
     }
@@ -222,7 +312,8 @@ function deletePermanently(id) {
 
 // --- UTILITIES ---
 async function copyText(id, btnElement) {
-    const prompt = activePrompts.find(p => p.id === id);
+    // Find in both arrays just in case, though usually called from active
+    let prompt = activePrompts.find(p => p.id === id) || trashPrompts.find(p => p.id === id);
     if (!prompt) return;
 
     try {
@@ -241,7 +332,8 @@ async function copyText(id, btnElement) {
 }
 
 function updateCategoryFilter() {
-    const categories = [...new Set(activePrompts.map(p => p.category))];
+    const sourceArray = currentView === 'trash' ? trashPrompts : activePrompts;
+    const categories = [...new Set(sourceArray.map(p => p.category))];
     const currentValue = categoryFilter.value;
     
     categoryFilter.innerHTML = '<option value="all">All Categories</option>';
@@ -268,11 +360,7 @@ function resetForm() {
 function escapeHTML(str) {
     return str.replace(/[&<>'"]/g, 
         tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
         }[tag])
     );
 }

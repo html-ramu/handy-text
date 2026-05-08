@@ -12,14 +12,11 @@
     --success: #10b981;
     --warning: #f59e0b;
     --info: #3b82f6;
+    --gold: #fbbf24;
     --radius: 8px;
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -29,10 +26,7 @@ body {
     padding: 1rem;
 }
 
-.container {
-    max-width: 900px;
-    margin: 0 auto;
-}
+.container { max-width: 900px; margin: 0 auto; }
 
 /* Header & Navigation */
 header {
@@ -49,6 +43,7 @@ header p { color: var(--text-muted); }
 .header-nav {
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
     background: var(--card-bg);
     padding: 0.5rem;
@@ -59,11 +54,12 @@ header p { color: var(--text-muted); }
 .nav-btn {
     background: transparent;
     color: var(--text-muted);
-    padding: 0.5rem 1.5rem;
+    padding: 0.5rem 1rem;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    border-radius: var(--radius);
 }
 
 .nav-btn.active {
@@ -111,7 +107,7 @@ button {
     cursor: pointer;
     border: none;
     border-radius: var(--radius);
-    transition: background-color 0.2s, opacity 0.2s;
+    transition: all 0.2s;
 }
 
 button:hover { opacity: 0.9; }
@@ -121,18 +117,32 @@ button:hover { opacity: 0.9; }
 
 .btn-small { padding: 0.4rem 0.8rem; font-size: 0.875rem; font-weight: 600; }
 .btn-copy { background-color: var(--success); color: white; }
-.btn-edit { background-color: var(--warning); color: white; }
+.btn-edit { background-color: var(--text-muted); color: white; }
 .btn-delete { background-color: var(--danger); color: white; }
 .btn-restore { background-color: var(--info); color: white; }
 .btn-delete-perm { background-color: var(--danger-hover); color: white; }
 
+/* Toggle Icons (Pin/Star) */
+.icon-btn {
+    background: none;
+    font-size: 1.2rem;
+    padding: 0.2rem;
+    opacity: 0.3;
+    filter: grayscale(100%);
+    border-radius: 50%;
+}
+.icon-btn:hover { opacity: 0.7; transform: scale(1.1); }
+.icon-btn.active-pin { opacity: 1; filter: none; }
+.icon-btn.active-fav { opacity: 1; filter: none; color: var(--gold); text-shadow: 0 0 2px rgba(251, 191, 36, 0.5); }
+
 .hidden { display: none !important; }
 
 /* Views */
-.trash-header {
+.trash-header, .view-header {
     margin-bottom: 1.5rem;
     text-align: center;
 }
+.view-header h2 { color: var(--primary-color); }
 
 /* Controls */
 .controls {
@@ -155,6 +165,14 @@ button:hover { opacity: 0.9; }
     border-radius: var(--radius);
     padding: 1.5rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: border-color 0.3s, transform 0.2s;
+    position: relative;
+}
+
+/* Visual indicator for pinned cards */
+.prompt-card.is-pinned {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.1);
 }
 
 .prompt-header {
@@ -164,6 +182,8 @@ button:hover { opacity: 0.9; }
     margin-bottom: 1rem;
 }
 
+.title-group h3 { margin-bottom: 0.2rem; font-size: 1.1rem; }
+
 .prompt-category {
     font-size: 0.75rem;
     background: var(--border-color);
@@ -172,6 +192,11 @@ button:hover { opacity: 0.9; }
     color: var(--text-muted);
     font-weight: bold;
     text-transform: uppercase;
+}
+
+.card-toggles {
+    display: flex;
+    gap: 0.5rem;
 }
 
 .prompt-text {
